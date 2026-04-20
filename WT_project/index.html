@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🛡 India Border Surveillance</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: "Courier New", Courier, monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      text-align: center;
+      padding: 14px 0 10px;
+      color: #58a6ff;
+      font-size: 1.1rem;
+      font-weight: bold;
+      letter-spacing: 2px;
+      border-bottom: 1px solid #1c2a3a;
+    }
+
+    /* ── Main layout ── */
+    .main-row {
+      display: flex;
+      gap: 16px;
+      padding: 16px;
+      width: 100%;
+      max-width: 1100px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Map ── */
+    .map-col {
+      flex: 1 1 560px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .map-label {
+      color: #58a6ff;
+      font-size: 0.75rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    #map {
+      width: 100%;
+      height: 440px;
+      border: 1px solid #58a6ff;
+      border-radius: 4px;
+      background: #0a1628;
+    }
+
+    .coord-bar {
+      font-size: 0.7rem;
+      color: #8b949e;
+      padding: 4px 2px;
+    }
+
+    /* ── Panel ── */
+    .panel-col {
+      flex: 0 0 260px;
+      background: #161b22;
+      border-radius: 6px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .panel-section-title {
+      color: #58a6ff;
+      font-size: 0.75rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    /* Route selector */
+    #routeSelect {
+      width: 100%;
+      background: #0d1117;
+      color: #e6edf3;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      padding: 6px 8px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    #routeSelect:focus { outline: 1px solid #58a6ff; }
+
+    /* Start button */
+    #startBtn {
+      width: 100%;
+      background: #58a6ff;
+      color: #0d1117;
+      border: none;
+      border-radius: 4px;
+      padding: 9px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    #startBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+    #startBtn:not(:disabled):hover { opacity: 0.85; }
+
+    /* Legend */
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      color: #e6edf3;
+    }
+    .legend-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Status */
+    #statusText {
+      font-size: 0.82rem;
+      color: #e6edf3;
+      line-height: 1.5;
+      min-height: 40px;
+    }
+
+    /* Event log */
+    #eventLog {
+      background: #0d1117;
+      border-radius: 4px;
+      padding: 8px;
+      height: 180px;
+      overflow-y: auto;
+      font-size: 0.72rem;
+      line-height: 1.6;
+      scrollbar-width: thin;
+      scrollbar-color: #30363d #0d1117;
+    }
+    #eventLog::-webkit-scrollbar { width: 5px; }
+    #eventLog::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+
+    .log-inside  { color: #00c853; }
+    .log-buffer  { color: #ffd600; }
+    .log-outside { color: #d50000; }
+    .log-alert   { color: #ff5555; font-weight: bold; }
+
+    /* Speed control */
+    .speed-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+    #speedSlider {
+      flex: 1;
+      accent-color: #58a6ff;
+      cursor: pointer;
+    }
+    #speedVal { color: #58a6ff; min-width: 36px; }
+  </style>
+</head>
+<body>
+
+<header>🛡&nbsp; INDIA BORDER SURVEILLANCE SYSTEM</header>
+
+<div class="main-row">
+
+  <!-- ── Map column ── -->
+  <div class="map-col">
+    <div class="map-label">LIVE MAP</div>
+    <div id="map"></div>
+    <div class="coord-bar" id="coordBar">Lat: --&nbsp;&nbsp; Lon: --</div>
+  </div>
+
+  <!-- ── Control panel ── -->
+  <div class="panel-col">
+
+    <div>
+      <div class="panel-section-title">SELECT ROUTE</div>
+      <select id="routeSelect"></select>
+    </div>
+
+    <div class="speed-row">
+      <span>Speed</span>
+      <input type="range" id="speedSlider" min="200" max="2000" step="100" value="900" />
+      <span id="speedVal">0.9 s</span>
+    </div>
+
+    <button id="startBtn">▶&nbsp; START TRACKING</button>
+
+    <div>
+      <div class="panel-section-title">ZONE LEGEND</div>
+      <div style="display:flex;flex-direction:column;gap:5px;margin-top:4px;">
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#00c853"></div>
+          <span>✅ Inside India</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#ffd600"></div>
+          <span>⚠️ Buffer Zone — WARNING</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#d50000"></div>
+          <span>🚨 Outside India</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel-section-title">STATUS</div>
+      <div id="statusText">Select a route and press Start.</div>
+    </div>
+
+    <div>
+      <div class="panel-section-title">EVENT LOG</div>
+      <div id="eventLog"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
